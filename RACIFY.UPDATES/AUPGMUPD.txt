@@ -1,0 +1,22 @@
+./  CHANGE NAME=AUPGM,NEW=PS
+** Updated 14APR12 - Authorization through RAC added.           JW12105 00452000
+**   On systems with resource access control active the AUPGM   JW12105 00454000
+**   command is executed only if the user has read access to    JW12105 00456000
+**   profile PGMAUTH in the FACILITY class.                     JW12105 00458000
+         L     R1,CVTPTR     get CVT address                    JW12105 01340800
+         ICM   R1,B'1111',CVTSAF(R1) SAFV defined ?             JW12105 01341600
+         BZ    IMPLEXUS      no RAC, try standard authorization JW12105 01342400
+         USING SAFV,R1       addressability of SAFV             JW12105 01343200
+         CLC   SAFVIDEN(4),SAFVID SAFV initialized ?            JW12105 01344000
+         BNE   IMPLEXUS      no RAC, try standard authorization JW12105 01344800
+         DROP  R1            SAFV no longer needed              JW12105 01345600
+         RACHECK ENTITY=PGMAUTH,CLASS='FACILITY',ATTR=READ      JW12105 01346400
+         LTR   R15,R15       RAC authorization granted?         JW12105 01347200
+         BNZ   IMPLEXEC      no, exit                           JW12105 01348000
+         B     IMPLTHRU      yes, go execute                    JW12105 01348800
+PGMAUTH  DC    CL39'PGMAUTH' facility name to authorize         JW12105 10303000
+SAFVID   DC    CL4'SAFV'     SAFV eye catcher                   JW12105 10306000
+         CVT   DSECT=YES                                        JW12105 12082000
+         IHAPSA ,                                               JW12105 12084000
+CVTSAF   EQU   248 CVTSAF doesn't exist but is a reserved field in 3.8J 12086000
+         ICHSAFV  DSECT=YES  map SAFV                           JW12105 12088000

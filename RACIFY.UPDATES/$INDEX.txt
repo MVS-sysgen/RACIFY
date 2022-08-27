@@ -1,0 +1,28 @@
+Member Index
+============
+
+$$README - Overview over RACified utilities and TSO command processors
+$INDEX   - This file
+
+AUPGM    - AUPGM command processor source
+AUPGMUPD - IEBUPDTE control cards to RACify AUPGM
+AUPGM$   - Jobstream to update, assemble and link edit AUPGM
+
+BSPHRCMD - BSPHRCMD utility source
+BSPHRUPD - IEBUPDTE control cards to RACify BSPHRCMD
+HRCMD$   - Jobstream to update, assemble and link edit BSPHRCMD
+
+DSSDUMP  - DSSDUMP utility source
+DSSDMUPD - IEBUPDTE control cards to RACify DSSDUMP
+DSSDMUP$ - Jobstream to update DSSDUMP
+DSSDUMP$ - Jobstream to apply the DSSDMUPD update as a ZAP to
+           the DSSDUMP load module as not all macros needed to
+           assemble DSSDUMP are freely available
+
+SHOWSS   - SHOWSS command processor source
+SHSSUPD  - IEBUPDTE control cards to RACify SHOWSS
+SHOWSS$  - Jobstream to update, assemble and link edit SHOWSS
+
+STEPLIB  - STEPLIB utility source
+STEPLUPD - IEBUPDTE control cards to RACify STEPLIB
+STEPLIB$ - Jobstream to update, assemble and link edit STEPLIB

@@ -1,0 +1,27 @@
+./  CHANGE NAME=BSPHRCMD,NEW=PS
+**                                                              JW12109 00151000
+** Updated 18APR12 - Authorization through RAC added.           JW12109 00152000
+**   On systems with resource access control active BSPHRCMD    JW12109 00153000
+**   executes only if the caller has read access to profile     JW12109 00154000
+**   DIAG8CMD in the FACILITY class.                            JW12109 00155000
+**                                                              JW12109 00156000
+         CVT   DSECT=YES                                        JW12109 00222000
+         IHAPSA ,                                               JW12109 00224000
+CVTSAF   EQU   248 CVTSAF doesn't exist but is a reserved field in 3.8J 00226000
+         ICHSAFV  DSECT=YES  map SAFV                           JW12109 00228000
+./ DELETE  SEQ1=03040000,SEQ2=03040000
+         L     R1,CVTPTR     get CVT address                    JW12109 03040000
+         ICM   R1,B'1111',CVTSAF(R1) SAFV defined ?             JW12109 03040700
+         BZ    GOAHEAD       no RAC, go ahead                   JW12109 03041400
+         USING SAFV,R1       addressability of SAFV             JW12109 03042100
+         CLC   SAFVIDEN(4),SAFVID SAFV initialized ?            JW12109 03042800
+         BNE   GOAHEAD       no RAC, go ahead                   JW12109 03043500
+         DROP  R1            SAFV no longer needed              JW12109 03044200
+         RACHECK ENTITY=DIAG8CMD,CLASS='FACILITY',ATTR=READ     JW12109 03044900
+         LTR   R15,R15       RAC authorization granted?         JW12109 03045600
+         BZ    GOAHEAD       yes, go ahead                      JW12109 03046300
+         SETMAXCC 12         get out with RC=12                 JW12109 03047000
+         B     EXIT                                             JW12109 03047700
+GOAHEAD  LM    R14,R1,SETISAVE        , restore all register    JW12109 03048400
+DIAG8CMD DC    CL39'DIAG8CMD' facility name to authorize        JW12109 05353000
+SAFVID   DC    CL4'SAFV'     SAFV eye catcher                   JW12109 05356000

@@ -1,0 +1,31 @@
+./  CHANGE NAME=STEPLIB,NEW=PS
+*    On systems with resource access control active the APF or AUTH *   00662000
+*    parameter will work only if the user has read access to        *   00664000
+*    profile STEPAUTH in the FACILITY class.                        *   00666000
+*                                                                   *   00668000
+*    2012/04/04   JW      if RAC is active check for read access to *   00822000
+*                         profile STEPAUTH in the FACILITY class    *   00824000
+*                         before acting upon the APF/AUTH parameter *   00826000
+./ DELETE  SEQ1=05640000,SEQ2=05640000
+AAPFPARM L     R2,CVTPTR     get CVT address                    JW12095 05640000
+         ICM   R2,B'1111',CVTSAF(R2) SAFV defined ?             JW12095 05640500
+         BZ    RACOK         no RAC, permit APF authorization   JW12095 05641000
+         USING SAFV,R2       addressability of SAFV             JW12095 05641500
+         CLC   SAFVIDEN(4),SAFVID SAFV initialized ?            JW12095 05642000
+         BNE   RACOK         no RAC, permit APF authorization   JW12095 05642500
+         DROP  R2            SAFV no longer needed              JW12095 05643000
+         LR    R2,R0         remember R0                        JW12095 05643500
+         LR    R3,R1         remember R1                        JW12095 05644000
+         LR    R4,R15        remember R15                       JW12095 05644500
+         RACHECK ENTITY=STEPAUTH,CLASS='FACILITY',ATTR=READ     JW12095 05645000
+         LR    R0,R2         restore R0                         JW12095 05645500
+         LR    R1,R3         restore R1                         JW12095 05646000
+         LR    R2,R15        remember return code               JW12095 05646500
+         LR    R15,R4        restore R15                        JW12095 05647000
+         LTR   R2,R2         RAC authorization granted?         JW12095 05647500
+         BNZ   GOLDPARM      ignore if not and go for more      JW12095 05648000
+RACOK    OI    PROCFLAG,PFAPF  REQUEST TO AUTHORIZE STEPLIBS    JW12095 05648500
+STEPAUTH DC    CL39'STEPAUTH' facility name to authorize        JW12095 11983000
+SAFVID   DC    CL4'SAFV'     SAFV eye catcher                   JW12095 11986000
+CVTSAF   EQU   248 CVTSAF doesn't exist but is a reserved field in 3.8J 14303000
+         ICHSAFV  DSECT=YES  map SAFV                           JW12095 14306000
