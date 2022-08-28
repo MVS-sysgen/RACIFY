@@ -23,6 +23,10 @@ https://github.com/MVS-sysgen/RAKFCL
 If you're on MVS/CE you must install MACLIBS and RAKFCL with:
 `RX MVP INSTALL MACLIB` and `RX MVP INSTALL RAKFCL`
 
+### DSSDUMP
+
+I'm currently unable to build DSSDUMP from source.
+
 # Original Readme
 
 Many utilities and TSO command processors available for MVS 3.8j
