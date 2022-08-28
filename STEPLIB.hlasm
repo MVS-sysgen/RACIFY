@@ -64,6 +64,10 @@ STEPLIB  TITLE '*****  S T E P L I B   C O M M A N D   P R O C E S S O X00010000
 *    TO AVOID CONFLICTS WITH THE OLD VERSION OF STEPLIB, THE NEW    *   00640000
 *    CODE USES A DDNAME PREFIX OF  STEPDYN                          *   00650000
 *                                                                   *   00660000
+*    On systems with resource access control active the APF or AUTH *   00662000
+*    parameter will work only if the user has read access to        *   00664000
+*    profile STEPAUTH in the FACILITY class.                        *   00666000
+*                                                                   *   00668000
 *********************************************************************   00670000
 *                                                                   *   00680000
 *    MAINTENANCE/MODIFICATIONS:                                     *   00690000
@@ -80,6 +84,9 @@ STEPLIB  TITLE '*****  S T E P L I B   C O M M A N D   P R O C E S S O X00010000
 *    1999/01/12   GYP     FIXED ADDRESSING ERROR                    *   00800000
 *    2006/11/23   GYP     CHANGED TO SUPPORT MVS 3.8J. FOR LATER    *   00810000
 *                         SYSTEMS, SET GBLB &MVSXA TO 1             *   00820000
+*    2012/04/04   JW      if RAC is active check for read access to *   00822000
+*                         profile STEPAUTH in the FACILITY class    *   00824000
+*                         before acting upon the APF/AUTH parameter *   00826000
 *********************************************************************   00830000
          SPACE 1                                                        00840000
          MACRO ,                                                        00850000
@@ -561,7 +568,24 @@ GOLDPARM BAL   R14,PARSEWRD  GET NEXT WORD(S), IF ANY           GP98348 05440000
          BNE   ERRBDPRM      BR IF NOT                          GP98349 05610000
          OI    STEPFLAG,PFLIST   REQUEST LISTING AFTER ALLOC.   GP98349 05620000
          B     GOLDPARM      GO FOR MORE                        GP98349 05630000
-AAPFPARM OI    PROCFLAG,PFAPF  REQUEST TO AUTHORIZE STEPLIBS    GP98349 05640000
+AAPFPARM L     R2,CVTPTR     get CVT address                    JW12095 05640000
+         ICM   R2,B'1111',CVTSAF(R2) SAFV defined ?             JW12095 05640500
+         BZ    RACOK         no RAC, permit APF authorization   JW12095 05641000
+         USING SAFV,R2       addressability of SAFV             JW12095 05641500
+         CLC   SAFVIDEN(4),SAFVID SAFV initialized ?            JW12095 05642000
+         BNE   RACOK         no RAC, permit APF authorization   JW12095 05642500
+         DROP  R2            SAFV no longer needed              JW12095 05643000
+         LR    R2,R0         remember R0                        JW12095 05643500
+         LR    R3,R1         remember R1                        JW12095 05644000
+         LR    R4,R15        remember R15                       JW12095 05644500
+         RACHECK ENTITY=STEPAUTH,CLASS='FACILITY',ATTR=READ     JW12095 05645000
+         LR    R0,R2         restore R0                         JW12095 05645500
+         LR    R1,R3         restore R1                         JW12095 05646000
+         LR    R2,R15        remember return code               JW12095 05646500
+         LR    R15,R4        restore R15                        JW12095 05647000
+         LTR   R2,R2         RAC authorization granted?         JW12095 05647500
+         BNZ   GOLDPARM      ignore if not and go for more      JW12095 05648000
+RACOK    OI    PROCFLAG,PFAPF  REQUEST TO AUTHORIZE STEPLIBS    JW12095 05648500
          B     GOLDPARM      GO FOR MORE                        GP98349 05650000
 APNDPARM OI    PROCFLAG,PFAPPEND  APPEND OLD STEPLIB DATA SETS  GP98348 05660000
          B     GOLDPARM      GO FOR MORE                        GP98348 05670000
@@ -1196,6 +1220,8 @@ EXOCPRM  OC    PARMWORD(0),0(R3)  MOVE INDENTIFIED WORD         GP98348 11900000
          DS    0D                                                       11960000
 SP1      DC    AL1(254),AL3(512)                                        11970000
 BLANKS   DC    CL80' '       SMALLER LOT OF BLANKS              GP98349 11980000
+STEPAUTH DC    CL39'STEPAUTH' facility name to authorize        JW12095 11983000
+SAFVID   DC    CL4'SAFV'     SAFV eye catcher                   JW12095 11986000
 MSGNOCHG MSGDEF 13,'NO TCBS MODIFIED - ALREADY HAD A TASKLIB'   GP98345 11990000
 MSGSMCHG MSGDEF 14,'AT LEAST ONE TCB NOT UPDATED - ALREADY HAS A TASKLI*12000000
                B',FLAG=W                                        GP98345 12010000
@@ -1427,6 +1453,8 @@ LOOKSWA  DS    0H                                               GP98344 14240000
 DYNWORK  WORKAREA PFX=       EXPAND MAPPING                     GP98345 14280000
 LDWSIZE  EQU   *-LDWDSECT                                       GP98345 14290000
          TITLE 'S T E P L I B  ***  DSECTS'                             14300000
+CVTSAF   EQU   248 CVTSAF doesn't exist but is a reserved field in 3.8J 14303000
+         ICHSAFV  DSECT=YES  map SAFV                           JW12095 14306000
          PRINT NOGEN         LOOK IT UP, LOOK IT UP                     14310000
          MSGWORK DSECT       DEFINE MSGDEF EXPANSION            GP98344 14320000
          SPACE 1                                                        14330000
