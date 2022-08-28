@@ -18,6 +18,10 @@
 *   THE SSVT IS NOT FREEMAINED.                                         00180000
 *  LOG OF CHANGES.                                                      00190000
 *   15JUN82 - PARSE ADDED.  ZERO KEYWORD ADDED.                         00200000
+*   14APR12 - Authorization through RAC added.                  JW12105 00202000
+*    On systems with resource access control active the SHOWSS  JW12105 00204000
+*    command is executed only if the user has read access to    JW12105 00206000
+*    profile SHOWAUTH in the FACILITY class.                    JW12105 00208000
          SPACE                                                          00210000
 SHOWSS   START                                                          00220000
          USING *,R12                                                    00230000
@@ -61,8 +65,20 @@ AUTHID   L     R1,16               CVTPTR                               00590000
          L     R15,4(,R15)         CURRENT TCB                          00610000
          L     R1,180(,R15)        TCBJSCB                              00620000
          L     R1,264(,R1)         JSCBPSCB                             00630000
-         LTR   R1,R1               ANY PSCB?                            00640000
+         LTR   R3,R1               ANY PSCB? (save R1)          JW12105 00640000
          BZ    IMPLEXEC            NO - NOT A TSO SESSION               00650000
+         L     R1,CVTPTR     get CVT address                    JW12105 00650700
+         ICM   R1,B'1111',CVTSAF(R1) SAFV defined ?             JW12105 00651400
+         BZ    NORAC         no RAC, try standard authorization JW12105 00652100
+         USING SAFV,R1       addressability of SAFV             JW12105 00652800
+         CLC   SAFVIDEN(4),SAFVID SAFV initialized ?            JW12105 00653500
+         BNE   NORAC         no RAC, try standard authorization JW12105 00654200
+         DROP  R1            SAFV no longer needed              JW12105 00654900
+         RACHECK ENTITY=SHOWAUTH,CLASS='FACILITY',ATTR=READ     JW12105 00655600
+         LTR   R15,R15       RAC authorization granted?         JW12105 00656300
+         BNZ   IMPLEXEC      no, exit                           JW12105 00657000
+         B     PROCEED       yes, go execute                    JW12105 00657700
+NORAC    LR    R1,R3         restore R1                         JW12105 00658400
          USING PSCB,R1                                                  00660000
 *        TM    PSCBATR1,PSCBCTRL   OPERATOR                             00670000
 *        BZ    IMPLEXEC            NO - BRANCH                          00680000
@@ -410,6 +426,8 @@ MSG01    DC    C'ERROR IN PARSE'                                        04090000
 AUTHMSG  DC    C'ENVIRONMENT IS NOT APF AUTHORIZED - ZERO IGNORED'      04100000
 ALREADY  DC    C'SSCTSSVT IS ALREADY ZERO'                              04110000
          DC    0D'0'                                                    04120000
+SHOWAUTH DC    CL39'SHOWAUTH' facility name to authorize        JW12105 04123000
+SAFVID   DC    CL4'SAFV'     SAFV eye catcher                   JW12105 04126000
          SPACE                                                          04130000
 ************************************************************            04140000
 *                                                          *            04150000
@@ -458,6 +476,13 @@ REPLY    DS    F                                                        04570000
 WTORW    DS    0F,CL80                                                  04580000
          DS    0D                                                       04590000
 @DATAL   EQU   *-@DATA                                                  04600000
+         SPACE ,                                                JW12105 04601000
+         CVT   DSECT=YES                                        JW12105 04602000
+         SPACE ,                                                JW12105 04603000
+         IHAPSA ,                                               JW12105 04604000
+         SPACE ,                                                JW12105 04605000
+CVTSAF   EQU   248 CVTSAF doesn't exist but is a reserved field in 3.8J 04606000
+         ICHSAFV  DSECT=YES  map SAFV                           JW12105 04607000
          SPACE                                                          04610000
          IKJCPPL                                                        04620000
          SPACE                                                          04630000
