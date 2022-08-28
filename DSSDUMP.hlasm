@@ -117,6 +117,13 @@ DSSDUMP  TITLE 'D S S D U M P  ***  DATA SET DUMP IN ADRDSSU FORMAT'    00010000
 *   Not-for-profit use permitted, and distribution rights granted to  * 01170000
 *   Hercules and CBT projects.                                        * 01180000
 *********************************************************************** 01190000
+*                                                               JW12114 01191000
+*  Updated 23APR12 - Authorization through RAC added.           JW12114 01192000
+*    On systems with resource access control active DSSDUMP     JW12114 01193000
+*    executes only if the caller has read access to profile     JW12114 01194000
+*    DSSAUTH in the FACILITY class.                             JW12114 01195000
+*                                                               JW12114 01196000
+*************************************************************** JW12114 01197000
          PRINT &PRTSOR                                                  01200000
 DSSDUMP  PGMHEAD ZERO31,BASE=(R11,R12),PARM=R9,BNDRY=PAGE,AM=24,RM=24   01210000
          L     R10,=A(DSSDUMPD)   GET SUBROUTINES AND STATIC DATA       01220000
@@ -187,8 +194,8 @@ DONEPARM LA    R8,RECREC     USE RECORD AREA IN MACRO EXPANSION         01750000
 *   WE NEED TO RUN AUTHORIZED FOR @VOLREAD'S DEB USE                  * 01870000
 *---------------------------------------------------------------------* 01880000
          TESTAUTH FCTN=1     ARE WE AUTHORIZED ?                        01890000
-         BXLE  R15,R15,HAVEAUTH   YES; WHOOPPEE                         01900000
-         PRTL  '*** DSSDUMP must run authorized ***'                    01910000
+         BXLE  R15,R15,CHECKRAC YES; check user authorization   JW12114 01900000
+ABEND    PRTL  '*** DSSDUMP must run authorized ***'            JW12114 01906000
          PRTCLOSE ,                                                     01920000
          ABEND 047,DUMP                                                 01930000
          SPACE 1                                                        01940000
@@ -987,6 +994,27 @@ VERBTAB2 PARKEYAD 'INCLUDE ',SETDUMP   SPECIFY DS MASK                  09760000
          PARKEYAD 'NODEBUG ',SETBUGOF                                   09870000
          PARKEYAD 'TEST    ',SETTSTON                                   09880000
 VERBTABN PARKEYAD 'DEBUG   ',SETBUGON                                   09890000
+BASE2    EQU   4096                                             JW12114 09890400
+CHECKRAC LA    R12,INCRBASE(,R12) increment 2nd base            JW12114 09890800
+INCRBASE EQU   CHECKRAC-BASE2 offset to original 2nd base       JW12114 09891200
+         USING CHECKRAC,R12   establish addressability          JW12114 09891600
+         L     R15,CVTPTR     get CVT address                   JW12114 09892000
+         ICM   R15,B'1111',CVTSAF(R15) SAFV defined?            JW12114 09892400
+         BZ    GOAHEAD        no RAC, go execute                JW12114 09892800
+         USING SAFV,R15       addressability of SAFV            JW12114 09893200
+         CLC   SAFVIDEN(4),SAFVID SAFV initialized?             JW12114 09893600
+         BNE   GOAHEAD        no RAC, go execute                JW12114 09894000
+         DROP  R15            SAFV no longer needed             JW12114 09894400
+         RACHECK ENTITY=DSSAUTH,CLASS='FACILITY',ATTR=READ      JW12114 09894800
+         LTR   R15,R15        RAC authorization granted?        JW12114 09895200
+         BZ    GOAHEAD        yes, go execute                   JW12114 09895600
+         S     R12,BASE2INC   no, restore 2nd base ..           JW12114 09896000
+         B     ABEND           .. and abend                     JW12114 09896400
+GOAHEAD  S     R12,BASE2INC   restore 2nd base                  JW12114 09896800
+         B     HAVEAUTH       WHOOPPEE                          JW12114 09897200
+BASE2INC DC    A(INCRBASE)    offset to original 2nd base       JW12114 09897600
+DSSAUTH  DC    CL39'DSSAUTH'  facility name to authorize        JW12114 09898000
+SAFVID   DC    CL4'SAFV'      SAFV eye catcher                  JW12114 09898400
          TITLE 'D S S D U M P  ***  MAKE DUMP TAPE'                     09900000
 DSSDUMP2 CSECT ,             SUBROUTINE AND DATA AREA                   09910000
          LA    R11,0(,R15)   COPY NEW BASE                              09920000
@@ -2120,6 +2148,9 @@ CRUDFMT4 DSECT ,                                                        21150000
          DCBD  DSORG=PS,DEVD=(TA,DA)                                    21200000
          IHADVCT ,                                                      21210000
          CVT   ,                                                        21220000
+         IHAPSA ,                                               JW12114 21222000
+CVTSAF   EQU   248 CVTSAF doesn't exist but is a reserved field in 3.8J 21224000
+         ICHSAFV  DSECT=YES  map SAFV                           JW12114 21226000
          IEFZB4D0 ,          SVC 99 RB DEFINITION                       21230000
          IEFZB4D2 ,          SVC 99 TEXT UNIT DEFS                      21240000
          SPACE 1                                                        21250000
